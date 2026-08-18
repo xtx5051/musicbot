@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs", "python3", "ffmpeg"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm install"]
 
 [start]
 cmd = "node index.js"
