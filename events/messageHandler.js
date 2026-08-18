@@ -8,39 +8,41 @@ module.exports = {
 
     async execute(message) {
         try {
-            // تجاهل البوتات
             if (message.author.bot) return;
+            if (!message.guild) return;
 
             const content = message.content.trim();
 
-            // تجاهل أي رسالة ليست من أوامرنا
-            if (!['ش', 'و', 'س', 'م', 'ك'].some(cmd =>
-                content === cmd || content.startsWith(cmd + ' ')
-            )) {
-                return;
-            }
+            const isCommand =
+                content === 'و' ||
+                content === 'س' ||
+                content === 'م' ||
+                content === 'ك' ||
+                content === 'ش' ||
+                content.startsWith('ش ');
+
+            if (!isCommand) return;
 
             const guild = message.guild;
-            if (!guild) return;
-
             const member = message.member;
+
             if (!member?.voice?.channel) {
                 await message.reply('يجب أن تكون في روم صوتي.');
                 return;
             }
 
-            let player = client?.players?.get(guild.id);
+            const client = message.client;
 
-            // تشغيل الأغنية
-            if (content.startsWith('ش ')) {
-                const query = content.slice(2).trim();
+            // تشغيل أغنية
+            if (content === 'ش' || content.startsWith('ش ')) {
+                const query = content.slice(1).trim();
 
                 if (!query) {
                     await message.reply('اكتب اسم الأغنية بعد ش.');
                     return;
                 }
 
-                let player = message.client.players.get(guild.id);
+                let player = client.players.get(guild.id);
 
                 if (!player) {
                     player = new MusicPlayer(
@@ -49,7 +51,7 @@ module.exports = {
                         member.voice.channel
                     );
 
-                    message.client.players.set(guild.id, player);
+                    client.players.set(guild.id, player);
                 }
 
                 player.voiceChannel = member.voice.channel;
@@ -65,26 +67,38 @@ module.exports = {
                     return;
                 }
 
-                if (!message.client.musicEmbedManager) {
+                if (!client.musicEmbedManager) {
                     const MusicEmbedManager = require('../src/MusicEmbedManager');
-                    message.client.musicEmbedManager =
-                        new MusicEmbedManager(message.client);
+                    client.musicEmbedManager = new MusicEmbedManager(client);
                 }
 
                 const fakeInteraction = {
-                    ...message,
+                    guild,
+                    channel: message.channel,
+                    member,
+                    user: message.author,
                     deferred: false,
                     replied: false,
-                    editReply: async data => message.reply(data),
-                    reply: async data => message.reply(data),
-                    followUp: async data => message.reply(data),
+
+                    editReply: async (data) => {
+                        return message.reply(data);
+                    },
+
+                    reply: async (data) => {
+                        return message.reply(data);
+                    },
+
+                    followUp: async (data) => {
+                        return message.reply(data);
+                    },
+
                     options: {
                         getString: () => query
                     }
                 };
 
                 const result =
-                    await message.client.musicEmbedManager.handleMusicData(
+                    await client.musicEmbedManager.handleMusicData(
                         guild.id,
                         trackData,
                         member,
@@ -98,7 +112,7 @@ module.exports = {
                 return;
             }
 
-            player = message.client.players.get(guild.id);
+            const player = client.players.get(guild.id);
 
             if (!player) {
                 await message.reply('لا توجد أغنية تعمل حاليًا.');
@@ -116,7 +130,7 @@ module.exports = {
                 return;
             }
 
-            // استكمال
+            // استكمال التشغيل
             if (content === 'ك') {
                 const resumed = player.resumeFor('manual');
 
@@ -127,35 +141,36 @@ module.exports = {
                 return;
             }
 
-            // تخطي
+            // تخطي الأغنية
             if (content === 'س') {
-                await player.skip();
-                await message.reply('تم التخطي.');
+                const skipped = player.skip();
+
+                if (skipped) {
+                    await message.reply('تم التخطي.');
+                }
+
                 return;
             }
 
-            // إيقاف الموسيقى مع بقاء البوت في الروم
+            // إيقاف الموسيقى مع بقاء البوت داخل الروم
             if (content === 'و') {
-                player.queue = [];
+                player.clearQueue();
+
+                if (player.trackTimer) {
+                    clearTimeout(player.trackTimer);
+                    player.trackTimer = null;
+                }
+
+                player.pendingEndReason = 'stop';
+                player.stopRequested = true;
                 player.currentTrack = null;
+                player.resource = null;
+                player.paused = false;
+                player.pauseReasons.clear();
 
-                if (player.audioPlayer) {
-                    try {
-                        player.audioPlayer.stop();
-                    } catch (error) {
-                        console.error('Failed to stop audio:', error);
-                    }
-                }
+                player.audioPlayer.stop(true);
 
-                player.clearInactivityTimer(false);
-
-                if (message.client.musicEmbedManager) {
-                    try {
-                        await message.client.musicEmbedManager.handlePlaybackEnd(player);
-                    } catch (error) {
-                        console.error('Failed to update playback UI:', error);
-                    }
-                }
+                await player.persistState('manual-stop');
 
                 return;
             }
