@@ -7,28 +7,56 @@ class YouTube {
         const baseOptions = {
             noCheckCertificates: true,
             noWarnings: true,
+
             retries: 3,
             fragmentRetries: 3,
+
+            // Use Node.js as the JS runtime for yt-dlp
             jsRuntimes: `node:${process.execPath}`,
+
+            // Keep requests looking like a normal browser request
             addHeader: [
-                'referer:youtube.com',
+                'referer:https://www.youtube.com/',
                 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             ],
+
+            // Prefer formats that are actually available.
+            format: 'bestaudio/best',
+
+            // Do not abort because a particular format is unavailable.
+            noCheckFormats: true,
+
             ...extraOptions
         };
 
-        // Auth priority:
-        // PO Token > Browser Cookie > Cookie File > iOS client
-        if (config.ytdl.poToken) {
-            baseOptions.extractorArgs =
-                `youtube:po_token=web+${config.ytdl.poToken};player_client=web`;
-        } else if (config.ytdl.cookiesFromBrowser) {
-            baseOptions.cookiesFromBrowser = config.ytdl.cookiesFromBrowser;
-        } else if (config.ytdl.cookiesFile) {
+        /*
+         * Authentication priority:
+         *
+         * 1. cookies.txt
+         * 2. browser cookies
+         * 3. PO Token
+         * 4. fallback clients
+         *
+         * On a server, cookies.txt is the most useful option.
+         */
+
+        if (config.ytdl.cookiesFile) {
             baseOptions.cookies = config.ytdl.cookiesFile;
+        } else if (config.ytdl.cookiesFromBrowser) {
+            baseOptions.cookiesFromBrowser =
+                config.ytdl.cookiesFromBrowser;
+        } else if (config.ytdl.poToken) {
+            baseOptions.extractorArgs =
+                `youtube:po_token=web+${config.ytdl.poToken}`;
         } else {
-            // Use iOS client when no authentication is configured
-            baseOptions.extractorArgs = 'youtube:player_client=ios';
+            /*
+             * Do not force the old iOS client here.
+             *
+             * Let yt-dlp select an appropriate client.
+             * This is more flexible with newer YouTube changes.
+             */
+            baseOptions.extractorArgs =
+                'youtube:player_client=default';
         }
 
         return baseOptions;
@@ -36,7 +64,7 @@ class YouTube {
 
     static async search(query, limit = 1, guildId = null) {
         try {
-            // If it's already a YouTube URL, get info directly
+            // If it is already a YouTube URL, get its information directly.
             if (this.isYouTubeURL(query)) {
                 const info = await this.getInfo(query, guildId);
                 return info ? [info] : [];
@@ -49,6 +77,7 @@ class YouTube {
                 this.getYtDlpOptions({
                     dumpSingleJson: true,
                     flatPlaylist: true,
+                    skipDownload: true,
                 })
             );
 
@@ -75,36 +104,59 @@ class YouTube {
                         : 'Unknown Artist';
 
                     const track = {
-                        title: item.title || item.fulltitle || unknownTitle,
-                        artist: item.uploader || item.channel || unknownArtist,
+                        title:
+                            item.title ||
+                            item.fulltitle ||
+                            unknownTitle,
+
+                        artist:
+                            item.uploader ||
+                            item.channel ||
+                            unknownArtist,
+
                         url:
                             item.webpage_url ||
                             item.url ||
                             (item.id
                                 ? `https://www.youtube.com/watch?v=${item.id}`
                                 : null),
+
                         duration: item.duration || 0,
+
                         thumbnail: item.thumbnail,
+
                         platform: 'youtube',
+
                         type: 'track',
+
                         id: item.id,
+
                         views: item.view_count,
+
                         uploadDate: item.upload_date,
+
                         description: item.description,
                     };
 
+                    // Some search results don't contain duration.
                     if (!track.duration || track.duration === 0) {
                         const detailedInfo = await this.getInfo(
                             track.url,
                             guildId
                         );
 
-                        if (detailedInfo && detailedInfo.duration) {
-                            track.duration = detailedInfo.duration;
+                        if (
+                            detailedInfo &&
+                            detailedInfo.duration
+                        ) {
+                            track.duration =
+                                detailedInfo.duration;
                         }
                     }
 
-                    tracks.push(track);
+                    if (track.url) {
+                        tracks.push(track);
+                    }
                 } catch (error) {
                     continue;
                 }
@@ -158,24 +210,42 @@ class YouTube {
                 )
                 : 'Unknown Artist';
 
-            const track = {
-                title: info.title || unknownTitle,
-                artist: info.uploader || info.channel || unknownArtist,
-                url: info.webpage_url || url,
-                duration: info.duration || 0,
+            return {
+                title:
+                    info.title ||
+                    unknownTitle,
+
+                artist:
+                    info.uploader ||
+                    info.channel ||
+                    unknownArtist,
+
+                url:
+                    info.webpage_url ||
+                    url,
+
+                duration:
+                    info.duration ||
+                    0,
+
                 thumbnail:
                     info.thumbnail ||
                     info.thumbnails?.[0]?.url,
+
                 platform: 'youtube',
+
                 type: 'track',
+
                 id: info.id,
+
                 views: info.view_count,
+
                 uploadDate: info.upload_date,
+
                 description: info.description,
+
                 formats: info.formats,
             };
-
-            return track;
 
         } catch (error) {
             console.error(
@@ -187,7 +257,11 @@ class YouTube {
         }
     }
 
-    static async getStream(url, guildId = null, startSeconds = 0) {
+    static async getStream(
+        url,
+        guildId = null,
+        startSeconds = 0
+    ) {
         try {
             if (!url) {
                 const errorMsg = guildId
@@ -206,11 +280,9 @@ class YouTube {
                     dumpSingleJson: true,
                     skipDownload: true,
 
-                    // Let yt-dlp choose an available audio format
-                    format: 'bestaudio/best',
+                    format:
+                        'bestaudio/best',
 
-                    // Do not fail just because a specific format
-                    // is unavailable
                     noCheckFormats: true,
                 })
             );
@@ -228,7 +300,8 @@ class YouTube {
 
             const baseUrl = info.url;
 
-            const canSeek = /googlevideo\.com/i.test(baseUrl);
+            const canSeek =
+                /googlevideo\.com/i.test(baseUrl);
 
             let finalUrl = baseUrl;
 
@@ -237,14 +310,19 @@ class YouTube {
                 Number(startSeconds) || 0
             );
 
-            if (seekSeconds > 0 && canSeek) {
-                const startMs = Math.floor(
-                    seekSeconds * 1000
-                );
+            if (
+                seekSeconds > 0 &&
+                canSeek
+            ) {
+                const startMs =
+                    Math.floor(
+                        seekSeconds * 1000
+                    );
 
-                const separator = baseUrl.includes('?')
-                    ? '&'
-                    : '?';
+                const separator =
+                    baseUrl.includes('?')
+                        ? '&'
+                        : '?';
 
                 finalUrl =
                     `${baseUrl}${separator}begin=${startMs}`;
@@ -252,6 +330,7 @@ class YouTube {
 
             return {
                 url: finalUrl,
+
                 rawUrl: baseUrl,
 
                 type:
@@ -260,7 +339,9 @@ class YouTube {
                         ? 'opus'
                         : 'arbitrary',
 
-                duration: info.duration || 0,
+                duration:
+                    info.duration ||
+                    0,
 
                 bitrate:
                     info.abr ||
@@ -269,10 +350,12 @@ class YouTube {
 
                 canSeek,
 
-                format: info.format,
+                format:
+                    info.format,
 
                 httpHeaders:
-                    info.http_headers || {}
+                    info.http_headers ||
+                    {}
             };
 
         } catch (error) {
@@ -285,13 +368,17 @@ class YouTube {
         }
     }
 
-    static async getPlaylist(url, guildId = null) {
+    static async getPlaylist(
+        url,
+        guildId = null
+    ) {
         try {
             const info = await youtubedl(
                 url,
                 this.getYtDlpOptions({
                     dumpSingleJson: true,
                     flatPlaylist: true,
+                    skipDownload: true,
                 })
             );
 
@@ -306,7 +393,10 @@ class YouTube {
                 throw new Error(errorMsg);
             }
 
-            if (!info.entries || info.entries.length === 0) {
+            if (
+                !info.entries ||
+                info.entries.length === 0
+            ) {
                 const errorMsg = guildId
                     ? await LanguageManager.getTranslation(
                         guildId,
@@ -339,7 +429,10 @@ class YouTube {
                     config.bot.maxPlaylistSize
                 )
             ) {
-                if (entry && (entry.id || entry.url)) {
+                if (
+                    entry &&
+                    (entry.id || entry.url)
+                ) {
                     try {
                         const track = {
                             title:
@@ -361,15 +454,21 @@ class YouTube {
                                     : null),
 
                             duration:
-                                entry.duration || 0,
+                                entry.duration ||
+                                0,
 
                             thumbnail:
                                 entry.thumbnail ||
                                 entry.thumbnails?.[0]?.url,
 
-                            platform: 'youtube',
-                            type: 'track',
-                            id: entry.id,
+                            platform:
+                                'youtube',
+
+                            type:
+                                'track',
+
+                            id:
+                                entry.id,
                         };
 
                         if (track.url) {
@@ -413,8 +512,11 @@ class YouTube {
 
                 url,
 
-                platform: 'youtube',
-                type: 'playlist',
+                platform:
+                    'youtube',
+
+                type:
+                    'playlist',
             };
 
         } catch (error) {
@@ -428,10 +530,16 @@ class YouTube {
     }
 
     static isYouTubeURL(url) {
+        if (!url || typeof url !== 'string') {
+            return false;
+        }
+
         const patterns = [
-            /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)/,
-            /^https?:\/\/(www\.)?youtube\.com\/embed\/[a-zA-Z0-9_-]+/,
-            /^https?:\/\/(www\.)?youtube\.com\/v\/[a-zA-Z0-9_-]+/,
+            /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)/i,
+
+            /^https?:\/\/(www\.)?youtube\.com\/embed\/[a-zA-Z0-9_-]+/i,
+
+            /^https?:\/\/(www\.)?youtube\.com\/v\/[a-zA-Z0-9_-]+/i,
         ];
 
         return patterns.some(
@@ -440,18 +548,30 @@ class YouTube {
     }
 
     static isPlaylist(url) {
+        if (!url || typeof url !== 'string') {
+            return false;
+        }
+
         return (
             url.includes('list=') &&
             (
-                url.includes('youtube.com/playlist') ||
-                url.includes('youtube.com/watch') ||
-                url.includes('youtu.be')
+                url.includes(
+                    'youtube.com/playlist'
+                ) ||
+                url.includes(
+                    'youtube.com/watch'
+                ) ||
+                url.includes(
+                    'youtu.be'
+                )
             )
         );
     }
 
     static parseDuration(durationString) {
-        if (!durationString) return 0;
+        if (!durationString) {
+            return 0;
+        }
 
         const parts =
             durationString
@@ -460,9 +580,16 @@ class YouTube {
 
         let seconds = 0;
 
-        for (let i = 0; i < parts.length; i++) {
+        for (
+            let i = 0;
+            i < parts.length;
+            i++
+        ) {
             seconds +=
-                parseInt(parts[i]) *
+                parseInt(
+                    parts[i],
+                    10
+                ) *
                 Math.pow(60, i);
         }
 
@@ -470,15 +597,22 @@ class YouTube {
     }
 
     static formatDuration(seconds) {
-        if (!seconds || seconds === 0) {
+        if (
+            !seconds ||
+            seconds === 0
+        ) {
             return '0:00';
         }
 
         const totalSeconds =
-            Math.floor(Number(seconds) || 0);
+            Math.floor(
+                Number(seconds) || 0
+            );
 
         const hours =
-            Math.floor(totalSeconds / 3600);
+            Math.floor(
+                totalSeconds / 3600
+            );
 
         const minutes =
             Math.floor(
@@ -491,18 +625,27 @@ class YouTube {
         if (hours > 0) {
             return (
                 `${hours}:` +
-                `${minutes.toString().padStart(2, '0')}:` +
-                `${remainingSeconds.toString().padStart(2, '0')}`
+                `${minutes
+                    .toString()
+                    .padStart(2, '0')}:` +
+                `${remainingSeconds
+                    .toString()
+                    .padStart(2, '0')}`
             );
         }
 
         return (
             `${minutes}:` +
-            `${remainingSeconds.toString().padStart(2, '0')}`
+            `${remainingSeconds
+                .toString()
+                .padStart(2, '0')}`
         );
     }
 
-    static async getRelatedVideos(videoId, limit = 5) {
+    static async getRelatedVideos(
+        videoId,
+        limit = 5
+    ) {
         try {
             return [];
         } catch (error) {
@@ -511,14 +654,21 @@ class YouTube {
     }
 
     static extractVideoId(url) {
+        if (!url || typeof url !== 'string') {
+            return null;
+        }
+
         const patterns = [
-            /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/,
-            /youtube\.com\/embed\/([a-zA-Z0-9_-]+)/,
-            /youtube\.com\/v\/([a-zA-Z0-9_-]+)/,
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/i,
+
+            /youtube\.com\/embed\/([a-zA-Z0-9_-]+)/i,
+
+            /youtube\.com\/v\/([a-zA-Z0-9_-]+)/i,
         ];
 
         for (const pattern of patterns) {
-            const match = url.match(pattern);
+            const match =
+                url.match(pattern);
 
             if (match) {
                 return match[1];
@@ -529,9 +679,13 @@ class YouTube {
     }
 
     static extractPlaylistId(url) {
+        if (!url || typeof url !== 'string') {
+            return null;
+        }
+
         const match =
             url.match(
-                /[&?]list=([a-zA-Z0-9_-]+)/
+                /[&?]list=([a-zA-Z0-9_-]+)/i
             );
 
         return match
@@ -550,7 +704,9 @@ class YouTube {
         return `https://www.youtube.com/watch?v=${videoId}`;
     }
 
-    static async validateUrl(url) {
+    static async validateUrl(
+        url
+    ) {
         try {
             if (!this.isYouTubeURL(url)) {
                 return false;
@@ -564,7 +720,10 @@ class YouTube {
                 })
             );
 
-            return !!info && !!info.title;
+            return (
+                !!info &&
+                !!info.title
+            );
 
         } catch (error) {
             return false;
