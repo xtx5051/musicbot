@@ -1,6 +1,28 @@
 // Load environment variables
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
+
+const cookiesPath = path.join(__dirname, 'cookies.txt');
+
+if (process.env.YOUTUBE_COOKIES) {
+    try {
+        fs.writeFileSync(
+            cookiesPath,
+            process.env.YOUTUBE_COOKIES,
+            'utf8'
+        );
+
+        console.log('✅ YouTube cookies loaded successfully.');
+    } catch (error) {
+        console.error(
+            '❌ Failed to create YouTube cookies file:',
+            error.message
+        );
+    }
+}
+
 module.exports = {
     // Discord Bot Settings
     discord: {
