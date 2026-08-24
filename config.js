@@ -21,6 +21,17 @@ if (process.env.YOUTUBE_COOKIES) {
         console.log(
     `🍪 cookies.txt size: ${fs.statSync(cookiesPath).size} bytes`
 );
+        const firstLine = fs
+    .readFileSync(cookiesPath, 'utf8')
+    .split('\n')[0]
+    .trim();
+
+console.log(
+    '🍪 Cookies format:',
+    firstLine.startsWith('# Netscape HTTP Cookie File')
+        ? '✅ Netscape'
+        : '❌ Unknown'
+);
     } catch (error) {
         console.error(
             '❌ Failed to create YouTube cookies file:',
