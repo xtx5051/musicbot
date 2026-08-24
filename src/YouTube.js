@@ -20,10 +20,10 @@ class YouTube {
                 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             ],
 
-            // Prefer formats that are actually available.
+            // Prefer formats that are actually available
             format: 'bestaudio/best',
 
-            // Do not abort because a particular format is unavailable.
+            // Do not abort because a particular format is unavailable
             noCheckFormats: true,
 
             ...extraOptions
@@ -35,31 +35,28 @@ class YouTube {
          * 1. cookies.txt
          * 2. browser cookies
          * 3. PO Token
-         * 4. fallback clients
-         *
-         * On a server, cookies.txt is the most useful option.
+         * 4. fallback client
          */
 
         if (config.ytdl.cookiesFile) {
-    baseOptions.cookies = config.ytdl.cookiesFile;
+            baseOptions.cookies = config.ytdl.cookiesFile;
 
-    console.log(
-        `🍪 yt-dlp cookies: ${config.ytdl.cookiesFile}`
-    );
-}
+            console.log(
+                `🍪 yt-dlp cookies: ${config.ytdl.cookiesFile}`
+            );
+
         } else if (config.ytdl.cookiesFromBrowser) {
+
             baseOptions.cookiesFromBrowser =
                 config.ytdl.cookiesFromBrowser;
+
         } else if (config.ytdl.poToken) {
+
             baseOptions.extractorArgs =
                 `youtube:po_token=web+${config.ytdl.poToken}`;
+
         } else {
-            /*
-             * Do not force the old iOS client here.
-             *
-             * Let yt-dlp select an appropriate client.
-             * This is more flexible with newer YouTube changes.
-             */
+
             baseOptions.extractorArgs =
                 'youtube:player_client=default';
         }
@@ -126,29 +123,41 @@ class YouTube {
                                 ? `https://www.youtube.com/watch?v=${item.id}`
                                 : null),
 
-                        duration: item.duration || 0,
+                        duration:
+                            item.duration || 0,
 
-                        thumbnail: item.thumbnail,
+                        thumbnail:
+                            item.thumbnail,
 
-                        platform: 'youtube',
+                        platform:
+                            'youtube',
 
-                        type: 'track',
+                        type:
+                            'track',
 
-                        id: item.id,
+                        id:
+                            item.id,
 
-                        views: item.view_count,
+                        views:
+                            item.view_count,
 
-                        uploadDate: item.upload_date,
+                        uploadDate:
+                            item.upload_date,
 
-                        description: item.description,
+                        description:
+                            item.description,
                     };
 
                     // Some search results don't contain duration.
-                    if (!track.duration || track.duration === 0) {
-                        const detailedInfo = await this.getInfo(
-                            track.url,
-                            guildId
-                        );
+                    if (
+                        !track.duration ||
+                        track.duration === 0
+                    ) {
+                        const detailedInfo =
+                            await this.getInfo(
+                                track.url,
+                                guildId
+                            );
 
                         if (
                             detailedInfo &&
@@ -162,6 +171,7 @@ class YouTube {
                     if (track.url) {
                         tracks.push(track);
                     }
+
                 } catch (error) {
                     continue;
                 }
@@ -237,19 +247,26 @@ class YouTube {
                     info.thumbnail ||
                     info.thumbnails?.[0]?.url,
 
-                platform: 'youtube',
+                platform:
+                    'youtube',
 
-                type: 'track',
+                type:
+                    'track',
 
-                id: info.id,
+                id:
+                    info.id,
 
-                views: info.view_count,
+                views:
+                    info.view_count,
 
-                uploadDate: info.upload_date,
+                uploadDate:
+                    info.upload_date,
 
-                description: info.description,
+                description:
+                    info.description,
 
-                formats: info.formats,
+                formats:
+                    info.formats,
             };
 
         } catch (error) {
@@ -310,10 +327,11 @@ class YouTube {
 
             let finalUrl = baseUrl;
 
-            const seekSeconds = Math.max(
-                0,
-                Number(startSeconds) || 0
-            );
+            const seekSeconds =
+                Math.max(
+                    0,
+                    Number(startSeconds) || 0
+                );
 
             if (
                 seekSeconds > 0 &&
@@ -334,9 +352,11 @@ class YouTube {
             }
 
             return {
-                url: finalUrl,
+                url:
+                    finalUrl,
 
-                rawUrl: baseUrl,
+                rawUrl:
+                    baseUrl,
 
                 type:
                     info.acodec &&
@@ -709,9 +729,7 @@ class YouTube {
         return `https://www.youtube.com/watch?v=${videoId}`;
     }
 
-    static async validateUrl(
-        url
-    ) {
+    static async validateUrl(url) {
         try {
             if (!this.isYouTubeURL(url)) {
                 return false;
