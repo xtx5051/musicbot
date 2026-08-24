@@ -41,7 +41,12 @@ class YouTube {
          */
 
         if (config.ytdl.cookiesFile) {
-            baseOptions.cookies = config.ytdl.cookiesFile;
+    baseOptions.cookies = config.ytdl.cookiesFile;
+
+    console.log(
+        `🍪 yt-dlp cookies: ${config.ytdl.cookiesFile}`
+    );
+}
         } else if (config.ytdl.cookiesFromBrowser) {
             baseOptions.cookiesFromBrowser =
                 config.ytdl.cookiesFromBrowser;
