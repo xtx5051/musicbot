@@ -16,6 +16,7 @@ if (process.env.YOUTUBE_COOKIES) {
             'utf8'
         );
 
+        console.log('🍪 YOUTUBE_COOKIES موجودة وتم تحميلها');
         console.log('✅ YouTube cookies loaded successfully.');
     } catch (error) {
         console.error(
