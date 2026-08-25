@@ -417,6 +417,56 @@ async function connectToFixedVoiceChannel(client) {
                         '⚠️ اتصال الروم الثابت تم تدميره!'
                     )
                 );
+                console.log(
+    chalk.cyan(
+        `🎵 [SHARD ${client.shard?.ids[0] ?? 0}] Music bot serving ${client.guilds.cache.size} servers on this shard!`
+    )
+);
+
+// ====================================================
+// 🏠 عرض السيرفرات اللي البوت موجود فيها
+// ====================================================
+
+console.log(
+    chalk.magenta(
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+    )
+);
+
+console.log(
+    chalk.magenta(
+        '🏠 السيرفرات اللي البوت موجود فيها:'
+    )
+);
+
+if (client.guilds.cache.size === 0) {
+
+    console.log(
+        chalk.yellow(
+            '⚠️ ما فيه سيرفرات محملة حاليًا.'
+        )
+    );
+
+} else {
+
+    client.guilds.cache.forEach(
+        (guild, index) => {
+
+            console.log(
+                chalk.white(
+                    `${index + 1}. ${guild.name} | ID: ${guild.id}`
+                )
+            );
+
+        }
+    );
+}
+
+console.log(
+    chalk.magenta(
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+    )
+);
 
                 fixedVoiceConnection = null;
 
