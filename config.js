@@ -6,6 +6,13 @@ const path = require('path');
 
 // YouTube cookies file path
 const cookiesPath = path.join(__dirname, 'cookies.txt');
+const cookiesPath = path.join(__dirname, 'cookies.txt');
+
+console.log('🍪 cookies path:', cookiesPath);
+console.log(
+    '🍪 cookies exists:',
+    fs.existsSync(cookiesPath)
+);
 
 // Create cookies.txt from Railway environment variable
 if (process.env.YOUTUBE_COOKIES) {
