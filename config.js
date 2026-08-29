@@ -24,6 +24,10 @@ if (process.env.YOUTUBE_COOKIES) {
 
         console.log('🍪 YOUTUBE_COOKIES موجودة وتم تحميلها');
         console.log('✅ YouTube cookies loaded successfully.');
+      console.log(
+    '🍪 Final cookies exists:',
+    fs.existsSync(cookiesPath)
+);
         console.log(
     `🍪 cookies.txt size: ${fs.statSync(cookiesPath).size} bytes`
 );
