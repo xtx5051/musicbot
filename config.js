@@ -6,7 +6,6 @@ const path = require('path');
 
 // YouTube cookies file path
 const cookiesPath = path.join(__dirname, 'cookies.txt');
-const cookiesPath = path.join(__dirname, 'cookies.txt');
 
 console.log('🍪 cookies path:', cookiesPath);
 console.log(
