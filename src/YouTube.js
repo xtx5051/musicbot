@@ -44,7 +44,11 @@ class YouTube {
             console.log(
                 `🍪 yt-dlp cookies: ${config.ytdl.cookiesFile}`
             );
-
+console.log(
+    '🍪 yt-dlp cookies exists:',
+    require('fs').existsSync(config.ytdl.cookiesFile)
+);
+            
         } else if (config.ytdl.cookiesFromBrowser) {
 
             baseOptions.cookiesFromBrowser =
